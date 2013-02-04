@@ -1,0 +1,31 @@
+<script type="text/template" id="period-picker">
+    <a href="#" class="w">1w</a> / <a href="#" class="d">1d</a> / <a href="#" class="h">1h</a>
+</script>
+
+<script type="text/template" id="exception-summary">
+        <span class="exception_count"><%= roundr(count) %></span>
+        <a href="/exceptions/<%= id %>/"><span class="exception_description"><%= exception_type %><%= exception_value %></span></a>
+        <span class="last_seen"><%= moment(last_seen).fromNow() %></span>
+    </a>
+</script>
+
+<script type="text/template" id="graph-filter">
+    <fieldset>
+        <input type="text" class="input-small" name="from" placeholder="From" disabled="disabled"/>
+        <input type="text" class="input-small" name="to" placeholder="To" disabled="disabled"/>
+        <input type="text" class="" name="url" placeholder="URL" />
+        <select class="input-small" disabled="disabled">
+            <option value="">Method</option>
+            <option>GET</option>
+            <option>PUT</option>
+            <option>POST</option>
+        </select>
+        <select class="input-small" disabled="disabled">
+            <option value="">Sort by</option>
+            <option>GET</option>
+            <option>PUT</option>
+            <option>POST</option>
+        </select>
+        <button type="submit" class="btn">Filter</button>
+    </fieldset>
+</script>

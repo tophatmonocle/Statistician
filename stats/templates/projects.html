@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block header %}
+<script src="/static/js/app.js"></script>
+<script src="/static/js/models.js"></script>
+<script src="/static/js/views.js"></script>
+<script type="text/javascript">
+    window.project = {% if project %}'{{ project }}'{% else %}null{% endif %};
+</script>
+<link rel="stylesheet" type="text/css" href="/static/css/app.css" />
+{% include "templates.html" %}
+<title>Statistician</title>
+{% endblock %}
+{% block body %}
+coming soon
+{% endblock %}
