@@ -1,7 +1,8 @@
 from tastypie.resources import ModelResource
-from tastypie.constants import ALL
+from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie import fields
-from stats.models import Request, ExceptionLog, Traceback, Project
+from stats.models import Request, ExceptionLog, Traceback, Project, Metric,\
+    MetricData
 from django.core.exceptions import ObjectDoesNotExist
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
@@ -12,10 +13,11 @@ from iso8601 import parse_date
 from datetime import timedelta
 from django.db.models import Avg, Max, Min, Sum, Variance, StdDev, Count
 import simplejson
+from api.authentication import StatsAuthentication
 
 
 class BucketResource(ModelResource):
-    max_buckets = 1000
+    max_buckets = 100
     agg_funcs = {
         "Avg": Avg,
         "Max": Max,
@@ -26,7 +28,7 @@ class BucketResource(ModelResource):
         "Count": Count
     }  # TODO do this dynamically
 
-    def override_urls(self):
+    def prepend_urls(self):
         return [
             url(r'^(?P<resource_name>%s)/buckets%s$' % (
                 self._meta.resource_name,
@@ -40,8 +42,9 @@ class BucketResource(ModelResource):
         self.is_authenticated(request)
         self.throttle_check(request)
         self.log_throttled_access(request)
+        bundle = self.build_bundle(request=request)
         return self.create_response(request,
-                                    self.build_buckets(request, **kwargs))
+                                    self.build_buckets(bundle, **kwargs))
 
     def build_filters(self, filters=None):
         if filters is not None:
@@ -51,29 +54,31 @@ class BucketResource(ModelResource):
                 filters['timestamp__lt'] = filters['to']
         return super(BucketResource, self).build_filters(filters)
 
-    def build_buckets(self, request, **kwargs):
+    def build_buckets(self, bundle, **kwargs):
         clean_kwargs = self.remove_api_resource_names(kwargs)
-
         try:
-            from_date = parse_date(request.GET.get('from'))
-            to_date = parse_date(request.GET.get('to'))
-            width = int(request.GET.get('width'))
+            from_date = parse_date(bundle.request.GET.get('from'))
+            to_date = parse_date(bundle.request.GET.get('to'))
+            width = int(bundle.request.GET.get('width'))
         except:
             raise BadRequest('missing required fields: from, to, width')
 
         dt = (to_date - from_date).total_seconds()
         bucket_count = dt / width
 
-        if bucket_count < 0 or bucket_count > self.max_buckets:
+        if bucket_count > self.max_buckets:
+            width = dt / self.max_buckets
+
+        if bucket_count < 0:
             raise BadRequest('to was less than from')
 
-        obj_list = self.obj_get_list(request, **clean_kwargs)
+        obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
 
         buckets = {}
         this_bucket = from_date
 
-        annotations = simplejson.loads(request.GET.get('annotations', "[]"))
-        aggregates = simplejson.loads(request.GET.get('aggregates', "[]"))
+        annotations = simplejson.loads(bundle.request.GET.get('annotations', "[]"))
+        aggregates = simplejson.loads(bundle.request.GET.get('aggregates', "[]"))
 
         # annotations come first
         annotation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in annotations)
@@ -83,19 +88,23 @@ class BucketResource(ModelResource):
             next_bucket = this_bucket + timedelta(seconds=width)
             bucket_obj = obj_list.filter(timestamp__gte=this_bucket,
                                          timestamp__lt=next_bucket)
-            bucket = {
-                "total": bucket_obj.count()
-            }
 
-            aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregates)
-            aggretate = bucket_obj.aggregate(**aggregation_params)
-            bucket.update(aggretate)
+            count = bucket_obj.count()
+            if count > 0:
+                bucket = {
+                    "count": bucket_obj.count()
+                }
 
-            buckets[this_bucket.isoformat()] = bucket
+                aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregates)
+                aggretate = bucket_obj.aggregate(**aggregation_params)
+                bucket.update(aggretate)
+
+                buckets[this_bucket.isoformat()] = bucket
             this_bucket = next_bucket
 
         result = {
             "total_count": obj_list.count(),
+            "width": width,
             "buckets": buckets
         }
 
@@ -207,3 +216,44 @@ class RequestResource(BucketResource):
         ]
         authorization = Authorization()
         authentication = Authentication()
+
+
+class MetricResource(ModelResource):
+    class Meta:
+        queryset = Metric.objects.all()
+        resource_name = 'metrics'
+
+
+class MetricDataResource(BucketResource):
+    # metric = fields.ToOneField(MetricResource, 'metric')
+    metric = fields.CharField('metric')
+
+    def build_filters(self, filters=None):
+        slug = None
+        if filters is not None:
+            if 'metric' in filters:
+                slug = filters['metric']
+                del filters['metric']
+        result = super(MetricDataResource, self).build_filters(filters)
+        if slug:
+            result["metric__slug"] = slug
+        return result
+
+    def dehydrate_metric(self, bundle):
+        return bundle.obj.metric.slug
+
+    def hydrate_metric(self, bundle):
+        bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
+        return bundle
+
+    class Meta:
+        queryset = MetricData.objects.all()
+        resource_name = 'metric_data'
+        fields = ['value', 'timestamp']
+        authorization = Authorization()
+        authentication = Authentication()
+        # authentication = StatsAuthentication()
+        filtering = {
+            'timestamp': ALL,
+            'metric': ALL_WITH_RELATIONS
+        }
