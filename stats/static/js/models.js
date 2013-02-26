@@ -60,4 +60,8 @@
         urlRoot: '/api/v1/exceptions',
         model: this.models.ExceptionLog
     });
+
+    this.models.Metric = Backbone.Model.extend({
+        urlRoot: '/api/v1/metrics/',
+    });
 }.call(window.Statistician));
