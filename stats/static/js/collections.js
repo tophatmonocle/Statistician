@@ -25,4 +25,14 @@
         urlRoot: '/api/v1/exceptions',
         model: this.models.ExceptionLog
     });
-}.call(window.Statistician));
+
+    this.collections.Metrics = Backbone.Collection.extend({
+        urlRoot: '/api/v1/metrics/',
+        model: this.models.Metric
+    });
+
+    this.collections.Instruments = Backbone.Collection.extend({
+        urlRoot: '/api/v1/instruments/',
+        model: this.models.Instrument
+    });
+}.call(window.Stats));

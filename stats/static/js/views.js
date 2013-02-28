@@ -2,166 +2,182 @@
 /*nomen=false*/
 (function () {
     'use strict';
-    this.views.Bucket = Backbone.View.extend({
-        default_transform: {
-            x: function (x) { return x; },
-            y: function (y) { return y; }
-        },
+    this.views.Instrument = Backbone.View.extend({
+        className: "widget span6",
         initialize: function () {
-            this.options.filters = _.extend({}, this.options.filters);
-            this.options.transform = _.extend(_.clone(this.default_transform), this.options.transform);
-            this.listenTo(this.model, 'change:data', this.render, this);
-            this.mapped_data = [];
+            this.listenTo(this.model, 'change:buckets', this.set_data, this);
+            this.template = _.template($('#instrument_template').html());
         },
         map_data: function () {
-            return {
-                data: _.map(this.model.get('data').buckets, function (bucket, timestamp) {
-                    var x, y;
-                    x = new Date(timestamp).getTime() / 1000;
-                    y = bucket[this.options.field];
-                    return {
-                        x: this.options.transform.x(x),
-                        y: this.options.transform.y(y)
-                    };
-                }, this),
-                color: '#c05020',
-                name: this.options.name
-            };
+            var buckets = this.model.get('buckets');
+            return _.map(buckets, function (bucket) {
+                var x, y;
+                x = new Date(bucket.timestamp).getTime();
+                y = bucket[this.options.field] || 0;
+                return {
+                    x: x,
+                    y: y
+                };
+            }.bind(this));
+        },
+        set_data: function () {
+            var data = this.map_data();
+            if (data.length == 0) { return; }
+            var vis = d3.select(this.el);
+
+            var yMin = _.min(data, function (datum) { return datum.y }).y,
+                yMax = _.max(data, function (datum) { return datum.y }).y,
+                xMin = _.min(data, function (datum) { return datum.x }).x,
+                xMax = _.max(data, function (datum) { return datum.x }).x;
+
+            var buffer = (yMax - yMin) * 0.1
+            yMin = Math.max(0, yMin - buffer);
+            yMax += buffer;
+
+            this.x.domain([xMin, xMax]);
+            this.y.domain([yMin, yMax]);
+            this.x2.domain(this.x.domain());
+            this.y2.domain(this.y.domain());
+
+            vis.selectAll('path.plot')
+                .data([data])
+                .attr("clip-path", "url(#clip)")
+                .attr("d", this.area);
+
+            vis.selectAll('path.miniplot')
+                .data([data])
+                .attr("clip-path", "url(#clip)")
+                .attr("d", this.area2);
+
+            this.yAxis.scale(this.y);
+            this.focus.select('.y.axis')
+                .call(this.yAxis);
+
+            this.xAxis.scale(this.x);
+            this.focus.select('.x.axis')
+                .call(this.xAxis);
+
+            this.xAxis2.scale(this.x2);
+            this.context.select('.x.axis')
+                .call(this.xAxis2);
+
+            this.brush.x(this.x2);
+            this.zoomView();
         },
         render: function () {
-            this.$el.html('');
-            if (this.model.get('data') === null) {
-                this.render_loading();
-            } else {
-                this.render_data();
+            console.log(this.$el.width());
+            this.$el.append(this.template(this.model));
+            var margin = {top: 10, right: 10, bottom: 80, left: 60},
+                margin2 = {top: 210, right: 10, bottom: 20, left: 60},
+                width = this.$el.width() - margin.left - margin.right,
+                height = 270 - margin.top - margin.bottom,
+                height2 = 270 - margin2.top - margin2.bottom;
+
+            this.x = d3.time.scale().range([0, width]),
+            this.x2 = d3.time.scale().range([0, width]),
+            this.y = d3.scale.linear().range([height, 0]),
+            this.y2 = d3.scale.linear().range([height2, 0]);
+
+            this.xAxis = d3.svg.axis().scale(this.x).orient("bottom"),
+            this.xAxis2 = d3.svg.axis().scale(this.x2).orient("bottom"),
+            this.yAxis = d3.svg.axis().scale(this.y).orient("left");
+
+            this.brush = d3.svg.brush()
+                .x(this.x2)
+                .on("brush", this.zoomView.bind(this))
+                .on('brushend', this.refineData.bind(this));
+
+            this.area = d3.svg.area()
+                .interpolate("monotone")
+                .x(function(d) {
+                    return this.x(d.x);
+                }.bind(this))
+                .y0(height)
+                .y1(function(d) {
+                    return this.y(d.y);
+                }.bind(this));
+
+            this.area2 = d3.svg.area()
+                .interpolate("monotone")
+                .x(function(d) {
+                    return this.x2(d.x);
+                }.bind(this))
+                .y0(height2)
+                .y1(function(d) {
+                    return this.y2(d.y);
+                }.bind(this));
+
+            var svgW = width + margin.left + margin.right,
+                svgH = width + margin.top + margin.bottom;
+
+            this.aspect = svgW / svgH;
+
+            this.svg = d3.select(this.$('.graph')[0]).append("svg")
+                .attr("width", svgW)
+                .attr("height", svgH)
+                .attr('viewBox', '0 0 '+svgW+' '+svgH)
+                .attr('preserveAspectRatio', 'xMidyMid')
+
+            this.svg.append("defs").append("clipPath")
+                .attr("id", "clip")
+              .append("rect")
+                .attr("width", width)
+                .attr("height", height);
+
+            this.focus = this.svg.append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            this.context = this.svg.append("g")
+                .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+            this.focus.append("path")
+                .attr("clip-path", "url(#clip)")
+                .attr('class', 'plot');
+
+            this.focus.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(this.xAxis);
+            this.focus.append("g")
+                .attr("class", "y axis")
+                .call(this.yAxis);
+            this.context.append("path")
+                .attr('class', 'miniplot');
+            this.context.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height2 + ")")
+                .call(this.xAxis2);
+            this.context.append("g")
+                .attr("class", "x brush")
+                .call(this.brush)
+                .selectAll("rect")
+                .attr("y", -6)
+                .attr("height", height2 + 7);
+
+            $(window).on('resize', this.resizeChart.bind(this));
+        },
+        resizeChart: function () {
+            var svg = this.$('svg');
+            svg.hide();
+            svg.attr('width', this.$el.width());
+            svg.attr('height', this.$el.width() / this.aspect);
+            svg.show();
+        },
+        zoomView: function () {
+          this.x.domain(this.brush.empty() ? this.x2.domain() : this.brush.extent());
+          this.focus.select("path").attr("d", this.area);
+          this.focus.select(".x.axis").call(this.xAxis);
+        },
+        refineData: function() {
+            var extent = this.brush.extent(), from, to;
+            if (!this.brush.empty()) {
+                from = extent[0];
+                to = extent[1];
+                this.model.getData({
+                    from: from,
+                    to: to
+                })
             }
-        },
-        render_loading: function () {
-            this.$el.css({width: this.options.width, height: this.options.height});
-            this.$el.addClass('loading_graph');
-        },
-        build_graph: function () {
-            var y_ticks, hoverDetail, xAxis, yAxis, data, max;
-            if (this.graph) {
-                delete this.graph;
-            }
-            data = this.map_data();
-            max = _.max(data.data, function (datum) { return datum.y });
-            this.graph = new Rickshaw.Graph({
-                element: this.el,
-                renderer: 'area',
-                stroke: true,
-                strokeWidth: 1,
-                height: this.options.height,
-                width: this.options.width,
-                interpolation: 'linear',
-                series: [data],
-                max: max.y * 1.2
-            });
-
-            xAxis = new Rickshaw.Graph.Axis.Time({
-                graph: this.graph
-            });
-
-            xAxis.render();
-
-            yAxis = new Rickshaw.Graph.Axis.Y({
-                graph: this.graph,
-                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-                pixelsPerTick: 30
-            });
-
-            yAxis.render();
-
-            hoverDetail = new Rickshaw.Graph.HoverDetail({
-                graph: this.graph,
-                formatter: function (series, x, y) {
-                    var date = '<span class="date">' + new Date(x * 1000).toUTCString() + '</span>',
-                        swatch = '<span class="detail_swatch" style="background-color: ' + series.color + '"></span>',
-                        content = swatch + series.name + ': ' + parseInt(y, 10) + '<br>' + date;
-                    return content;
-                }
-            });
-        },
-        render_data: function () {
-            this.$el.removeClass('loading_graph');
-            this.build_graph();
-            this.graph.render();
         }
     });
-
-    this.views.PeriodPicker = Backbone.View.extend({
-        className: 'period_picker d',
-        events: {
-            'click a': 'select'
-        },
-        select: function (e) {
-            var period, from, to, width;
-
-            period = e.target.className;
-            this.$el.removeClass().addClass('period_picker').addClass(period);
-            e.preventDefault();
-
-            to = new Date();
-            from = new Date();
-            switch (period) {
-            case 'h':
-                from.setHours(to.getHours() - 1);
-                break;
-            case 'd':
-                from.setDate(to.getDate() - 1);
-                break;
-            case 'w':
-                from.setDate(to.getDate() - 7);
-                break;
-            }
-            width = Math.floor((to - from) / 24 / 1000);
-            this.model.update({
-                from: from,
-                to: to,
-                width: width,
-                data: null
-            });
-        },
-        render: function () {
-            this.$el.addClass(this.options.selected);
-            this.$el.html($('#period-picker').html());
-        }
-    });
-
-    this.views.ExceptionSummary = Backbone.View.extend({
-        className: 'exceptionSummary',
-        tagName: 'li',
-        render: function () {
-            this.$el.html(_.template($('#exception-summary').html(), this.model.attributes));
-        }
-    });
-
-    this.views.GraphFilter = Backbone.View.extend({
-        tagName: 'form',
-        className: 'form-inline',
-        events: {
-            'submit': 'submit'
-        },
-        submit: function (e) {
-            var url, from, to;
-            url = this.$('input[name="url"]').val();
-            from = new Date();
-            to = new Date();
-            from.setHours(to.getHours() - 1);
-            this.model.set({
-                from: from,
-                to: to,
-                filters: {
-                    url: url
-                }
-            });
-            this.model.fetch();
-            e.preventDefault();
-            return false;
-        },
-        render: function () {
-            this.$el.html(($('#graph-filter').html()))
-        }
-    });
-}.call(window.Statistician));
+}.call(window.Stats));

@@ -2,7 +2,7 @@ from tastypie.resources import ModelResource
 from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie import fields
 from stats.models import Request, ExceptionLog, Traceback, Project, Metric,\
-    MetricData
+    MetricData, Instrument
 from django.core.exceptions import ObjectDoesNotExist
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
@@ -59,9 +59,10 @@ class BucketResource(ModelResource):
         try:
             from_date = parse_date(bundle.request.GET.get('from'))
             to_date = parse_date(bundle.request.GET.get('to'))
-            width = int(bundle.request.GET.get('width'))
         except:
-            raise BadRequest('missing required fields: from, to, width')
+            raise BadRequest('missing required fields: from, to')
+
+        width = int(bundle.request.GET.get('width', 1))
 
         dt = (to_date - from_date).total_seconds()
         bucket_count = dt / width
@@ -74,11 +75,11 @@ class BucketResource(ModelResource):
 
         obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
 
-        buckets = {}
+        buckets = []
         this_bucket = from_date
 
         annotations = simplejson.loads(bundle.request.GET.get('annotations', "[]"))
-        aggregates = simplejson.loads(bundle.request.GET.get('aggregates', "[]"))
+        aggregations = simplejson.loads(bundle.request.GET.get('aggregations', "[]"))
 
         # annotations come first
         annotation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in annotations)
@@ -92,14 +93,15 @@ class BucketResource(ModelResource):
             count = bucket_obj.count()
             if count > 0:
                 bucket = {
+                    "timestamp": this_bucket.isoformat(),
                     "count": bucket_obj.count()
                 }
 
-                aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregates)
+                aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregations)
                 aggretate = bucket_obj.aggregate(**aggregation_params)
                 bucket.update(aggretate)
 
-                buckets[this_bucket.isoformat()] = bucket
+                buckets.append(bucket)
             this_bucket = next_bucket
 
         result = {
@@ -219,6 +221,16 @@ class RequestResource(BucketResource):
 
 
 class MetricResource(ModelResource):
+    def build_filters(self, filters=None):
+        slug = None
+        if filters is not None:
+            if 'project' in filters:
+                slug = filters['project']
+                del filters['project']
+        result = super(MetricResource, self).build_filters(filters)
+        if slug:
+            result["project__slug"] = slug
+        return result
     class Meta:
         queryset = Metric.objects.all()
         resource_name = 'metrics'
@@ -226,10 +238,11 @@ class MetricResource(ModelResource):
 
 class MetricDataResource(BucketResource):
     # metric = fields.ToOneField(MetricResource, 'metric')
-    metric = fields.CharField('metric')
+    metric = fields.CharField()
 
     def build_filters(self, filters=None):
         slug = None
+        print filters
         if filters is not None:
             if 'metric' in filters:
                 slug = filters['metric']
@@ -237,13 +250,16 @@ class MetricDataResource(BucketResource):
         result = super(MetricDataResource, self).build_filters(filters)
         if slug:
             result["metric__slug"] = slug
+        print result
         return result
 
     def dehydrate_metric(self, bundle):
         return bundle.obj.metric.slug
 
     def hydrate_metric(self, bundle):
+        print "here!"
         bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
+        print "there!"
         return bundle
 
     class Meta:
@@ -255,5 +271,22 @@ class MetricDataResource(BucketResource):
         # authentication = StatsAuthentication()
         filtering = {
             'timestamp': ALL,
-            'metric': ALL_WITH_RELATIONS
+            # 'metric': ALL_WITH_RELATIONS
         }
+
+
+class InstrumentResource(ModelResource):
+    metric = fields.CharField('metric__slug')
+    annotations = fields.ListField('annotations')
+    aggregations = fields.ListField('aggregations')
+
+    def dehydrate_annotations(self, bundle):
+        return simplejson.loads(bundle.obj.annotations)
+
+    def dehydrate_aggregations(self, bundle):
+        return simplejson.loads(bundle.obj.aggregations)
+
+    class Meta:
+        queryset = Instrument.objects.all()
+        resource_name = "instruments"
+        fields = ['name']

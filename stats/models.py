@@ -68,3 +68,17 @@ class MetricData(models.Model):
         if self.timestamp is None:
             self.timestamp = datetime.utcnow()
         super(MetricData, self).save(*args, **kwargs)
+
+
+class Instrument(models.Model):
+    metric = models.ForeignKey(Metric)
+    name = models.CharField(max_length=255)
+    slug = models.SlugField()
+
+    annotations = models.TextField(default="[]")
+    aggregations = models.TextField(default="[]")
+    values = models.TextField(default="[]")
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)[:50]
+        return super(Instrument, self).save(*args, **kwargs)

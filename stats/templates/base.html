@@ -11,56 +11,58 @@
         <script src="/static/js/libraries/rickshaw.js"></script>
         <script src="/static/js/libraries/moment.js"></script>
         <script src="/static/js/util.js"></script>
-        <link rel="stylesheet" type="text/css" href="/static/css/libraries/bootstrap.css" />
         <!-- <link rel="stylesheet" type="text/css" href="/static/css/libraries/base-admin.css" /> -->
-        <link rel="stylesheet" type="text/css" href="/static/css/bootstrap-override.css" />
-        <link rel="stylesheet" type="text/css" href="/static/css/libraries/rickshaw.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/libraries/bootstrap.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/libraries/style.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/libraries/style-responsive.css" />
         <!-- <link rel="stylesheet" type="text/css" href="/static/css/libraries/normalize.css" /> -->
         {% block header %}
+        <script type="text/javascript">
+        window.project = "{{project}}";
+        </script>
         {% endblock %}
     </head>
     <body>
-        <header>
-            <div class="navbar">
-                <div class="navbar-inner">
-                    <a class="brand" href="/">Statistician</a>
-                    <div class="container">
-                        <div class="nav-collapse">
-                            <ul class="nav pull-right">
-                                {% if projects %}
-                                <li class="dropdown">
-                                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">Projects<span class="caret"></span></a>
-                                    <ul class="dropdown-menu">
-                                        {% for p in projects %}
-                                        <li{% if p.slug == project %} class="active"{% endif %}><a href="/{{p.slug}}/">{{ p.name }}</a></li>
-                                        {% endfor %}
-                                        {% if projects.count > 0 %}
-                                        <li class="divider"></li>
-                                        {% endif %}
-                                        <li><a href="/projects/">Manage projects...</a></li>
-                                    </ul>
-                                </li>
-                                {% endif %}
-                                <li class="dropdown">
-                                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">{{ username }}<span class="caret"></span></a>
-                                    <ul class="dropdown-menu">
-                                        <li>
-                                            <!-- nested much? -->
-                                            <a href="/logout/">Logout</a>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </div>
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="container-fluid">
+                    <a class="brand" href="/"><span>Statistician</span></a>
+                    <div class="nav-no-collapse header-nav">
+                        <ul class="nav pull-right">
+                            {% if projects %}
+                            <li class="dropdown">
+                                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Projects <span class="caret"></span></a>
+                                <ul class="dropdown-menu">
+                                    {% for p in projects %}
+                                    <li{% if p.slug == project %} class="active"{% endif %}><a href="/{{p.slug}}/">{{ p.name }}</a></li>
+                                    {% endfor %}
+                                    {% if projects.count > 0 %}
+                                    <li class="divider"></li>
+                                    {% endif %}
+                                    <li><a href="/">Manage projects...</a></li>
+                                </ul>
+                            </li>
+                            {% endif %}
+                            <li class="dropdown">
+                                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                                    <i class="halflings-icon white user"></i>
+                                    {{ username }} <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <!-- nested much? -->
+                                        <a href="/logout/">Logout</a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </header>
-        <section id="content">
-            <div class="container">
-                {% block body %}
-                {% endblock %}
-            </div>
-        </section>
+        </div>
+        <div class="container-fluid" id="main">
+        {% block body %}
+        {% endblock %}
+        </div>
     </body>
 </html>

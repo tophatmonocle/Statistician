@@ -1,67 +1,60 @@
 /*global Backbone, window, _, $*/
 (function () {
     "use strict";
-    this.models.Request = Backbone.Model.extend({
-        urlRoot: "/api/v1/requests/",
-        get_detail_url: function () {
-            return "/requests/" + this.get('id');
-        }
+    this.models.Metric = Backbone.Model.extend({
+        urlRoot: '/api/v1/metrics/',
     });
 
-    this.models.RequestCollection = Backbone.Collection.extend({
-        model: this.models.Request,
-        urlRoot: "/api/v1/requests/"
-    });
-
-    this.models.BucketReport = Backbone.Model.extend({
+    this.models.Instrument = Backbone.Model.extend({
+        urlRoot: '/api/v1/instruments/',
         defaults: {
-            filters: {},
-            aggregates: [],
+            aggregations: [],
             annotations: [],
-            data: null
+            buckets: [],
         },
-        fetch: function (cb, context) {
+        getData: function (options, cb, context) {
             var url, data;
-            url = '/api/v1/' + this.get('resource') + '/buckets/';
+            url = '/api/v1/metric_data/buckets/';
             data = {
-                from: this.get('from').toISOString(),
-                to: this.get('to').toISOString(),
-                width: this.get('width'),
-                aggregates: JSON.stringify(this.get('aggregates')),
-                annotations: JSON.stringify(this.get('annotations'))
+                from: options.from.toISOString(),
+                to: options.to.toISOString(),
+                width: options.width,
+                aggregations: JSON.stringify(this.get('aggregations')),
+                annotations: JSON.stringify(this.get('annotations')),
+                metric: this.get('metric')
             };
-            _.extend(data, this.get('filters'));
 
             return $.ajax({
                 url: url,
                 dataType: 'json',
-            type: 'GET',
+                type: 'GET',
                 data: data,
                 context: this,
                 success: function (data, statux, xhr) {
-                    this.set({data: data});
+                    this.merge(data.buckets);
                     if (_.isFunction(cb)) {
                         cb.call(context);
                     }
                 }
             });
+        },
+        merge: function (new_buckets) {
+            if (new_buckets.length == 0) { return; }
+            var buckets = this.get('buckets');
+            var from = new_buckets[0].timestamp;
+            var to = new_buckets[new_buckets.length-1].timestamp;
+            var old = buckets.length;
+            // remove all the data that's overridden by this merge
+            buckets = _.filter(buckets, function (bucket) {
+                return bucket.timestamp < from || bucket.timestamp > to;
+            });
+
+            buckets.push.apply(buckets, new_buckets);
+            var sorted_buckets = _.sortBy(buckets, function (bucket) {
+                return bucket.timestamp;
+            });
+            this.set({buckets: sorted_buckets});
+            this.trigger('change:buckets');
         }
     });
-
-    this.models.BucketCollection = Backbone.Collection.extend({
-        model: this.models.BucketReport
-    });
-
-    this.models.ExceptionLog = Backbone.Model.extend({
-        urlRoot: '/api/v1/exceptions/'
-    });
-
-    this.models.ExceptionLogCollection = Backbone.Collection.extend({
-        urlRoot: '/api/v1/exceptions',
-        model: this.models.ExceptionLog
-    });
-
-    this.models.Metric = Backbone.Model.extend({
-        urlRoot: '/api/v1/metrics/',
-    });
-}.call(window.Statistician));
+}.call(window.Stats));

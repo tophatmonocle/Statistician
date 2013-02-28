@@ -1,9 +1,8 @@
 /*global window*/
 (function () {
     'use strict';
-    window.Statistician = {
-        models: {},
-        collections: {},
-        views: {}
-    };
-}.call());
+    this.Stats = {};
+    this.Stats.models = {};
+    this.Stats.views = {};
+    this.Stats.collections = {};
+}.call(this));

@@ -1,88 +1,37 @@
-.rickshaw_graph .detail .x_label { display: none }
-.rickshaw_graph .detail .item { line-height: 1.4; padding: 0.5em }
-.detail_swatch { float: right; display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 0 }
-.rickshaw_graph .detail .date { color: #a0a0a0 }
-.rickshaw_graph svg {
-    background-color: #2e3236;
-}
-.rickshaw_graph .x_tick.glow .title, .rickshaw_graph .y_ticks text {
-    color: #c8c8c8;
-    fill: #c8c8c8;
+#content>div {
+    min-height: 430px;
 }
 
-.well {
-    position: relative;
-    padding-top: 40px;
-}
-.annotation
-{
-    position: absolute;
-    top: -1px;
-    left: -1px;
-    padding: 3px 7px;
-    font-size: 12px;
-    font-weight: bold;
-    background-color: #484d51;
-    border: 1px solid rgb(16, 18, 20);
-    color: #9DA0A4;
-    -webkit-border-radius: 4px 0 4px 0;
-    -moz-border-radius: 4px 0 4px 0;
-    border-radius: 4px 0 4px 0;*/
+.graph .extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+  height: 100%;
 }
 
-.loading_graph {
-    /*display: inline-block;*/
-    width: 420px;
-    height: 100px;
-    background-color: #2e3236;
-    background-image: url('../img/loading.gif');
-    background-repeat: no-repeat;
-    background-position: center;
+.plot, .miniplot {
+    stroke: none;
+    fill: steelblue;
 }
 
-.period_picker {
-    display: inline;
-    margin-left: 10px;
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
 }
 
-.period_picker.w a.w, .period_picker.d a.d, .period_picker.h a.h {
-    text-decoration: underline;
+.brush .extent {
+    stroke: #fff;
+    fill-opacity: .125;
+    shape-rendering: crispEdges;
 }
 
-#requests table {
-    font-size: 12px;
+text {
+    color: #fff;
 }
 
-.no-overflow {
-    display: inline-block;
-    width: 100%;
-    overflow-x: hidden;
-    white-space: nowrap;
-    max-width: 338px; /* TODO :fixthis */
-    text-overflow: ellipsis;
-}
-
-#trending_exceptions {
-    margin: 0;
-}
-
-.exceptionSummary {
-    list-style: none;
-    margin-right: 19px;
+svg {
     display: block;
-    padding: 10px;
-}
-
-.exceptionSummary .exception_count {
-    padding: 0 10px;
-}
-
-.exceptionSummary:hover {
-    background-color: #272b30;
-}
-
-.exceptionSummary .last_seen {
-    float: right;
-    font-size: 0.9em;
-    font-style: italic;
+    font-size: 11px;
 }

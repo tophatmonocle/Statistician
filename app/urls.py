@@ -1,6 +1,6 @@
 from tastypie.api import Api
 from api.resources import RequestResource, BucketResource, ExceptionResource,\
-  TracebackResource, MetricResource, MetricDataResource
+  TracebackResource, MetricResource, MetricDataResource, InstrumentResource
 from django.conf.urls.defaults import patterns, include, url
 
 api_v1 = Api(api_name='v1')
@@ -11,6 +11,7 @@ api_v1.register(TracebackResource())
 api_v1.register(RequestResource())
 api_v1.register(MetricResource())
 api_v1.register(MetricDataResource())
+api_v1.register(InstrumentResource())
 
 urlpatterns  = patterns('',
                         url(r'^unauthorized/', 'stats.views.unauthorized'),
@@ -24,11 +25,7 @@ urlpatterns  = patterns('',
                             'django.contrib.auth.views.logout',
                             {'next_page': '/'}, name='logout'),
                         (r'^api/', include(api_v1.urls)),
-                        url('^projects/(?P<project_slug>[-\w]+)?/?',
-                            'stats.views.projects'),
-                        url('^(?P<project_slug>[-\w]+)/graphs/(?P<graph_slug>[-\w]+)/?$',
-                            'stats.views.graphs'),
-                        url('^(?P<project_slug>[-\w]+)/?$',
+                        url('^(?P<project_slug>[-\w]+)/?.*$',
                             'stats.views.project'),
                         url('^/?$', 'stats.views.index')
                         )
