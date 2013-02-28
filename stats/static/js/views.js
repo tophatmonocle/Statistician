@@ -23,6 +23,8 @@
         set_data: function () {
             var data = this.map_data();
             if (data.length == 0) { return; }
+            this.has_data = true;
+
             var vis = d3.select(this.el);
 
             var yMin = _.min(data, function (datum) { return datum.y }).y,
@@ -65,25 +67,18 @@
             this.zoomView();
         },
         render: function () {
-            console.log(this.$el.width());
             this.$el.append(this.template(this.model));
-            var margin = {top: 10, right: 10, bottom: 80, left: 60},
-                margin2 = {top: 210, right: 10, bottom: 20, left: 60},
-                width = this.$el.width() - margin.left - margin.right,
-                height = 270 - margin.top - margin.bottom,
-                height2 = 270 - margin2.top - margin2.bottom;
 
-            this.x = d3.time.scale().range([0, width]),
-            this.x2 = d3.time.scale().range([0, width]),
-            this.y = d3.scale.linear().range([height, 0]),
-            this.y2 = d3.scale.linear().range([height2, 0]);
+            this.x = d3.time.scale(),
+            this.x2 = d3.time.scale(),
+            this.y = d3.scale.linear(),
+            this.y2 = d3.scale.linear();
 
-            this.xAxis = d3.svg.axis().scale(this.x).orient("bottom"),
-            this.xAxis2 = d3.svg.axis().scale(this.x2).orient("bottom"),
-            this.yAxis = d3.svg.axis().scale(this.y).orient("left");
+            this.xAxis = d3.svg.axis(),
+            this.xAxis2 = d3.svg.axis(),
+            this.yAxis = d3.svg.axis();
 
             this.brush = d3.svg.brush()
-                .x(this.x2)
                 .on("brush", this.zoomView.bind(this))
                 .on('brushend', this.refineData.bind(this));
 
@@ -92,7 +87,7 @@
                 .x(function(d) {
                     return this.x(d.x);
                 }.bind(this))
-                .y0(height)
+                .y0(0)
                 .y1(function(d) {
                     return this.y(d.y);
                 }.bind(this));
@@ -102,33 +97,19 @@
                 .x(function(d) {
                     return this.x2(d.x);
                 }.bind(this))
-                .y0(height2)
                 .y1(function(d) {
                     return this.y2(d.y);
                 }.bind(this));
 
-            var svgW = width + margin.left + margin.right,
-                svgH = width + margin.top + margin.bottom;
-
-            this.aspect = svgW / svgH;
-
             this.svg = d3.select(this.$('.graph')[0]).append("svg")
-                .attr("width", svgW)
-                .attr("height", svgH)
-                .attr('viewBox', '0 0 '+svgW+' '+svgH)
-                .attr('preserveAspectRatio', 'xMidyMid')
 
             this.svg.append("defs").append("clipPath")
                 .attr("id", "clip")
-              .append("rect")
-                .attr("width", width)
-                .attr("height", height);
+              .append("rect");
 
-            this.focus = this.svg.append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            this.focus = this.svg.append("g");
 
             this.context = this.svg.append("g")
-                .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
             this.focus.append("path")
                 .attr("clip-path", "url(#clip)")
@@ -136,8 +117,6 @@
 
             this.focus.append("g")
                 .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(this.xAxis);
             this.focus.append("g")
                 .attr("class", "y axis")
                 .call(this.yAxis);
@@ -145,22 +124,73 @@
                 .attr('class', 'miniplot');
             this.context.append("g")
                 .attr("class", "x axis")
-                .attr("transform", "translate(0," + height2 + ")")
-                .call(this.xAxis2);
             this.context.append("g")
                 .attr("class", "x brush")
+
+            $(window).on('resize', this.resizeChart.bind(this));
+            this.resizeChart();
+        },
+        resizeChart: function () {
+            var svg = this.$('svg');
+            svg.hide();
+
+            var margin = {top: 10, right: 10, bottom: 80, left: 60},
+                margin2 = {top: 210, right: 10, bottom: 20, left: 60},
+                width = this.$el.width() - margin.left - margin.right,
+                height = 270 - margin.top - margin.bottom,
+                height2 = 270 - margin2.top - margin2.bottom;
+
+            this.x.range([0, width]);
+            this.x2.range([0, width]);
+            this.y.range([height, 0]);
+            this.y2.range([height2, 0]);
+
+            this.xAxis.scale(this.x).orient("bottom"),
+            this.xAxis2.scale(this.x2).orient("bottom"),
+            this.yAxis.scale(this.y).orient("left");
+
+            var svgW = width + margin.left + margin.right,
+                svgH = height + margin.top + margin.bottom;
+
+            this.svg
+                .attr("width", svgW)
+                .attr("height", svgH)
+              .select("#clip rect")
+                .attr("width", width)
+                .attr("height", height);
+
+            this.brush.x(this.x2)
+            this.svg.select('.brush')
                 .call(this.brush)
                 .selectAll("rect")
                 .attr("y", -6)
                 .attr("height", height2 + 7);
 
-            $(window).on('resize', this.resizeChart.bind(this));
-        },
-        resizeChart: function () {
-            var svg = this.$('svg');
-            svg.hide();
-            svg.attr('width', this.$el.width());
-            svg.attr('height', this.$el.width() / this.aspect);
+            this.area
+                .y0(height);
+
+            this.area2
+                .y0(height2);
+
+            this.focus
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+              .select('g')
+                .attr("transform", "translate(0," + height + ")")
+                .call(this.xAxis);
+
+            if (this.has_data) {
+                this.focus.select("path").attr("d", this.area);
+                this.focus.select(".x.axis").call(this.xAxis);
+                this.context.select("path").attr("d", this.area2);
+                this.context.select(".x.axis").call(this.xAxis2);
+            }
+
+            this.context
+                .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")")
+              .select('g')
+                .attr("transform", "translate(0," + height2 + ")")
+                .call(this.xAxis2);
+
             svg.show();
         },
         zoomView: function () {
