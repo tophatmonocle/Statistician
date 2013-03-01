@@ -10,8 +10,22 @@
 </script>
 <script type="text/html" id="instrument_template">
     <h2><%= get('name') %></h2>
-    <div class="graph">
+    <div class="loading"></div>
+    <div class="graph" style="display: none">
     </div>
+</script>
+<script type="text/html" id="event_template">
+    <div class="task">
+        <span>
+            <h3><%= get('name') %></h3>
+            <span class="type"><%= get('type') %></span>
+            <span class="details"><%=get('description') %></span>
+        </span>
+        <div class="arrow"></div>
+    </div>
+    <div class="icon">
+    </div>
+    <div class="time"><%= moment(get('timestamp')).fromNow() %></div>
 </script>
 <link rel="stylesheet" type="text/css" href="/static/css/app.css" />
 {% include "templates.html" %}
@@ -24,24 +38,30 @@
             <ul class="nav nav-tabs nav-stacked main-menu">
                 <li class="active" data-tab="">
                     <a href="#">
-                        <i class="fa-icon-bar-chart"></i>
+                        <i class="fa-icon-dashboard"></i>
                         <span> Dashboard</span>
                     </a>
                 </li>
-                <li data-tab="servers">
-                    <a href="#">
-                        <i class="fa-icon-hdd"></i>
-                        <span> Servers</span>
+                <li data-tab="reports">
+                    <a href="#reports">
+                        <i class="fa-icon-bar-chart"></i>
+                        <span> Reports</span>
                     </a>
                 </li>
                 <li data-tab="events">
-                    <a href="#">
+                    <a href="#events">
                         <i class="fa-icon-calendar"></i>
                         <span> Events</span>
                     </a>
                 </li>
+                <li data-tab="servers">
+                    <a href="#servers">
+                        <i class="fa-icon-hdd"></i>
+                        <span> Servers</span>
+                    </a>
+                </li>
                 <li data-tab="metrics">
-                    <a href="#">
+                    <a href="#metrics">
                         <i class="fa-icon-dashboard"></i>
                         <span> Metrics</span>
                     </a>
@@ -52,27 +72,33 @@
     <div id="content" class="span11">
         <div data-content="">
             <div class="row-fluid stats-date">
-                <div>Dashboard</div>
+                <h1>Dashboard</h1>
                 <div class="range" id="date_range">loading...</div>
             </div>
             <div class="row-fluid" id="instruments">
             </div>
         </div>
-        <div data-content="servers" style="display:none">
+        <div data-content="reports">
             <div class="row-fluid stats-date">
-                <div>Servers</div>
+                <h1>Reports</h1>
                 <div class="range" id="date_range">loading...</div>
             </div>
         </div>
         <div data-content="events" style="display:none">
             <div class="row-fluid stats-date">
-                <div>Events</div>
+                <h1>Events</h1>
+                <div class="timeline"></div>
+            </div>
+        </div>
+        <div data-content="servers" style="display:none">
+            <div class="row-fluid stats-date">
+                <h1>Servers</h1>
                 <div class="range" id="date_range">loading...</div>
             </div>
         </div>
         <div data-content="metrics" style="display:none">
             <div class="row-fluid stats-date">
-                <div>Metrics</div>
+                <h1>Metrics</h1>
                 <div class="range" id="date_range">loading...</div>
             </div>
         </div>

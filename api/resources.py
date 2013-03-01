@@ -2,7 +2,7 @@ from tastypie.resources import ModelResource
 from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie import fields
 from stats.models import Request, ExceptionLog, Traceback, Project, Metric,\
-    MetricData, Instrument
+    MetricData, Instrument, Event
 from django.core.exceptions import ObjectDoesNotExist
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
@@ -242,7 +242,6 @@ class MetricDataResource(BucketResource):
 
     def build_filters(self, filters=None):
         slug = None
-        print filters
         if filters is not None:
             if 'metric' in filters:
                 slug = filters['metric']
@@ -250,16 +249,13 @@ class MetricDataResource(BucketResource):
         result = super(MetricDataResource, self).build_filters(filters)
         if slug:
             result["metric__slug"] = slug
-        print result
         return result
 
     def dehydrate_metric(self, bundle):
         return bundle.obj.metric.slug
 
     def hydrate_metric(self, bundle):
-        print "here!"
         bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
-        print "there!"
         return bundle
 
     class Meta:
@@ -290,3 +286,10 @@ class InstrumentResource(ModelResource):
         queryset = Instrument.objects.all()
         resource_name = "instruments"
         fields = ['name']
+
+
+class EventResource(ModelResource):
+    class Meta:
+        queryset = Event.objects.order_by('-timestamp')
+        resource_name = "events"
+

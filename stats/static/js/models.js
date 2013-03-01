@@ -5,6 +5,10 @@
         urlRoot: '/api/v1/metrics/',
     });
 
+    this.models.Event = Backbone.Model.extend({
+        urlRoot: '/api/v1/events/',
+    });
+
     this.models.Instrument = Backbone.Model.extend({
         urlRoot: '/api/v1/instruments/',
         defaults: {

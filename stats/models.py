@@ -82,3 +82,10 @@ class Instrument(models.Model):
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)[:50]
         return super(Instrument, self).save(*args, **kwargs)
+
+
+class Event(models.Model):
+    name = models.CharField(max_length=255)
+    timestamp = models.DateTimeField()
+    type = models.CharField(max_length=255)
+    description = models.TextField()

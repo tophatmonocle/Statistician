@@ -23,6 +23,8 @@
         set_data: function () {
             var data = this.map_data();
             if (data.length == 0) { return; }
+            this.$('.loading').hide();
+            this.$('.graph').show();
             this.has_data = true;
 
             var vis = d3.select(this.el);
@@ -207,6 +209,24 @@
                     from: from,
                     to: to
                 })
+            }
+        }
+    });
+
+    this.views.Event = Backbone.View.extend({
+        className: 'timeslot',
+        icon: function () {
+            switch (this.model.get('type')) {
+            default:
+                return "fa-icon-calendar"
+            }
+        },
+        render: function () {
+            this.$el.append(_.template($('#event_template').html(), this.model));
+            var icon = this.icon(this);
+            this.$('.icon').append('<i class="' + this.icon() + '"></i>');
+            if (this.options.alt) {
+                this.$el.addClass('alt');
             }
         }
     });
