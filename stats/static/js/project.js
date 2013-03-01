@@ -40,7 +40,9 @@ $(document).ready(function () {
             if (window.app.events) { return; }
             window.app.events = new Stats.collections.Events();
             var events = window.app.events;
-            events.fetch().then(function () {
+            events.fetch({
+                data: {project: window.project},
+            }).then(function () {
                 var alt = false;
                 events.each(function (event) {
                     var v = new Stats.views.Event({

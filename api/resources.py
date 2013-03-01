@@ -1,5 +1,5 @@
 from tastypie.resources import ModelResource
-from tastypie.constants import ALL, ALL_WITH_RELATIONS
+from tastypie.constants import ALL
 from tastypie import fields
 from stats.models import Request, ExceptionLog, Traceback, Project, Metric,\
     MetricData, Instrument, Event
@@ -13,7 +13,6 @@ from iso8601 import parse_date
 from datetime import timedelta
 from django.db.models import Avg, Max, Min, Sum, Variance, StdDev, Count
 import simplejson
-from api.authentication import StatsAuthentication
 
 
 class BucketResource(ModelResource):
@@ -231,6 +230,7 @@ class MetricResource(ModelResource):
         if slug:
             result["project__slug"] = slug
         return result
+
     class Meta:
         queryset = Metric.objects.all()
         resource_name = 'metrics'
@@ -282,6 +282,17 @@ class InstrumentResource(ModelResource):
     def dehydrate_aggregations(self, bundle):
         return simplejson.loads(bundle.obj.aggregations)
 
+    def build_filters(self, filters=None):
+        slug = None
+        if filters is not None:
+            if 'project' in filters:
+                slug = filters['project']
+                del filters['project']
+        result = super(InstrumentResource, self).build_filters(filters)
+        if slug:
+            result["metric__project__slug"] = slug
+        return result
+
     class Meta:
         queryset = Instrument.objects.all()
         resource_name = "instruments"
@@ -289,7 +300,18 @@ class InstrumentResource(ModelResource):
 
 
 class EventResource(ModelResource):
+
+    def build_filters(self, filters=None):
+        slug = None
+        if filters is not None:
+            if 'project' in filters:
+                slug = filters['project']
+                del filters['project']
+        result = super(EventResource, self).build_filters(filters)
+        if slug:
+            result["project__slug"] = slug
+        return result
+
     class Meta:
         queryset = Event.objects.order_by('-timestamp')
         resource_name = "events"
-

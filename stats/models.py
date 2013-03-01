@@ -85,6 +85,7 @@ class Instrument(models.Model):
 
 
 class Event(models.Model):
+    project = models.ForeignKey(Project)
     name = models.CharField(max_length=255)
     timestamp = models.DateTimeField()
     type = models.CharField(max_length=255)
