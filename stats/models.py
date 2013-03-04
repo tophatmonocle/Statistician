@@ -25,30 +25,6 @@ class Project(models.Model):
         return hmac.new(str(new_uuid), digestmod=sha1).hexdigest()
 
 
-class ExceptionLog(models.Model):
-    project = models.ForeignKey(Project)
-    exception_type = models.CharField(max_length=100)
-    exception_value = models.CharField(max_length=255)
-
-
-class Traceback(models.Model):
-    project = models.ForeignKey(Project)
-    trace = models.TextField()
-
-
-class Request(models.Model):
-    project = models.ForeignKey(Project)
-    timestamp = models.DateTimeField()
-    username = models.CharField(max_length=255)
-    method = models.CharField(max_length=10)
-    url = models.CharField(max_length=1000)
-    status = models.IntegerField()
-    time = models.FloatField()
-    exception_log = models.ForeignKey(ExceptionLog, null=True)
-    traceback = models.ForeignKey(Traceback, null=True)
-    hostname = models.CharField(max_length=100)
-
-
 class Metric(models.Model):
     project = models.ForeignKey(Project)
     name = models.CharField(max_length=255)
@@ -66,7 +42,7 @@ class MetricData(models.Model):
 
     def save(self, *args, **kwargs):
         if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = datetime.now()
         super(MetricData, self).save(*args, **kwargs)
 
 

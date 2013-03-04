@@ -52,3 +52,16 @@ svg {
 .timeslot {
     height: 150px;
 }
+
+.instrument {
+    position: relative;
+}
+
+.latest {
+    display: block;
+    margin-bottom: -1em;
+    float: right;
+    right: 0px;
+    font-size: 2.5em;
+    margin-right: 1em;
+}

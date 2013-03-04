@@ -3,10 +3,15 @@
 (function () {
     'use strict';
     this.views.Instrument = Backbone.View.extend({
-        className: "widget span6",
+        className: "widget span6 instrument",
         initialize: function () {
             this.listenTo(this.model, 'change:buckets', this.set_data, this);
+            this.listenTo(this.model, 'change:latest', this.set_latest, this);
             this.template = _.template($('#instrument_template').html());
+        },
+        set_latest: function () {
+            var value = this.model.get('latest').value;
+            this.$('.latest').text(Humanize.intcomma(value));
         },
         map_data: function () {
             var buckets = this.model.get('buckets');

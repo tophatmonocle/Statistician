@@ -11,14 +11,39 @@
 
     this.models.Instrument = Backbone.Model.extend({
         urlRoot: '/api/v1/instruments/',
+        dataUrl: '/api/v1/metric_data/',
+        bucketUrl: '/api/v1/metric_data/buckets/',
         defaults: {
             aggregations: [],
             annotations: [],
             buckets: [],
+            latest: null
+        },
+        getLatest: function (options, cb, context) {
+            var data = {    
+                order_by: '-timestamp',
+                limit: 1,
+                metric: this.get('metric')
+            }
+
+            return $.ajax({
+                url: this.dataUrl,
+                dataType: 'json',
+                type: 'GET',
+                data: data,
+                context: this,
+                success: function (data, statux, xhr) {
+                    if (data.objects && data.objects.length == 1) {
+                        this.set({latest: data.objects[0]});
+                        if (_.isFunction(cb)) {
+                            cb.call(context);
+                        }
+                    }
+                }
+            });
         },
         getData: function (options, cb, context) {
-            var url, data;
-            url = '/api/v1/metric_data/buckets/';
+            var data;
             data = {
                 from: options.from.toISOString(),
                 to: options.to.toISOString(),
@@ -29,7 +54,7 @@
             };
 
             return $.ajax({
-                url: url,
+                url: this.bucketUrl,
                 dataType: 'json',
                 type: 'GET',
                 data: data,

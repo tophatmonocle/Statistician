@@ -1,9 +1,7 @@
 from tastypie.resources import ModelResource
 from tastypie.constants import ALL
 from tastypie import fields
-from stats.models import Request, ExceptionLog, Traceback, Project, Metric,\
-    MetricData, Instrument, Event
-from django.core.exceptions import ObjectDoesNotExist
+from stats.models import Metric, MetricData, Instrument, Event
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
 from django.conf.urls.defaults import url
@@ -93,7 +91,6 @@ class BucketResource(ModelResource):
             if count > 0:
                 bucket = {
                     "timestamp": this_bucket.isoformat(),
-                    "count": bucket_obj.count()
                 }
 
                 aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregations)
@@ -110,113 +107,6 @@ class BucketResource(ModelResource):
         }
 
         return result
-
-
-class TracebackResource(ModelResource):
-    trace = fields.CharField('trace')
-
-    class Meta:
-        queryset = Traceback.objects.all()
-        resource_name = 'tracebacks'
-        allowed_methods = ['get', 'post', 'patch', 'put']
-        authorization = Authorization()
-        authentication = Authentication()
-
-
-class ExceptionResource(ModelResource):
-    exception_type = fields.CharField('exception_type')
-    exception_value = fields.CharField('exception_value')
-    last_seen = fields.DateTimeField('last_seen', null=True, readonly=True)
-    count = fields.IntegerField('count', default=0, readonly=True)
-
-    # def dehydrate_last_seen(self, bundle):
-        # return bundle.obj.request_set.order_by('-timestamp')[0].timestamp
-
-    class Meta:
-        queryset = ExceptionLog.objects.all().annotate(
-            last_seen=Max('request__timestamp'), count=Count('request'))
-        resource_name = 'exceptions'
-        allowed_methods = ['get', 'post', 'patch', 'put']
-        authorization = Authorization()
-        authentication = Authentication()
-        ordering = [
-            'last_seen',
-            'count'
-        ]
-
-
-class RequestResource(BucketResource):
-    timestamp = fields.DateTimeField('timestamp')
-    username = fields.CharField('username')
-    method = fields.CharField('method')
-    url = fields.CharField('url')
-    status = fields.IntegerField('status')
-    time = fields.FloatField('time')
-    exception = fields.ToOneField(ExceptionResource,
-                                  'exception_log',
-                                  null=True)
-    traceback = fields.ToOneField(TracebackResource,
-                                  'traceback',
-                                  null=True)
-    hostname = fields.CharField('hostname')
-
-    def full_hydrate(self, bundle):
-        bundle.obj.project = self.get_project(bundle)
-        return super(RequestResource, self).full_hydrate(bundle)
-
-    def save_related(self, bundle):
-        # almost entirely identical to super method
-        project = self.get_project(bundle)
-        for field_name, field_object in self.fields.items():
-            if not getattr(field_object, 'is_related', False):
-                continue
-
-            if getattr(field_object, 'is_m2m', False):
-                continue
-
-            if not field_object.attribute:
-                continue
-
-            if field_object.blank:
-                continue
-
-            # Get the object.
-            try:
-                related_obj = getattr(bundle.obj, field_object.attribute)
-            except ObjectDoesNotExist:
-                related_obj = None
-
-            # Because sometimes it's ``None`` & that's OK.
-            if related_obj:
-                related_obj.project = project
-                related_obj.save()
-                setattr(bundle.obj, field_object.attribute, related_obj)
-
-    def get_project(self, bundle):
-        # key = bundle.request.META.get("HTTP_KEY")
-        try:
-            project = Project.objects.get(id=1)  # TODO fix this to use key
-            return project
-        except Project.DoesNotExist:
-            return None
-
-    class Meta:
-        queryset = Request.objects.order_by('-timestamp')
-        resource_name = 'requests'
-        allowed_methods = ['get', 'post', 'patch', 'put']
-        filtering = {
-            'timestamp': ALL,
-            'username': ALL,
-            'method': ALL,
-            'url': ALL,
-            'status': ALL,
-            'time': ALL
-        }
-        ordering = [
-            'time',
-        ]
-        authorization = Authorization()
-        authentication = Authentication()
 
 
 class MetricResource(ModelResource):
@@ -268,6 +158,9 @@ class MetricDataResource(BucketResource):
         filtering = {
             'timestamp': ALL,
             # 'metric': ALL_WITH_RELATIONS
+        }
+        ordering = {
+            'timestamp'
         }
 
 

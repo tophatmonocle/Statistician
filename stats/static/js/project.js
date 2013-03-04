@@ -29,6 +29,7 @@ $(document).ready(function () {
                         from: from,
                         to: to,
                     });
+                    instrument.getLatest();
 
                     $('#instruments').append(v.el);
                     v.render();
