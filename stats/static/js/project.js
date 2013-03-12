@@ -13,14 +13,26 @@ $(document).ready(function () {
             window.app.instruments = new Stats.collections.Instruments();
             var instruments = window.app.instruments;
             var from = new Date();
-            from.setDate(from.getDate() - 5);
+            from.setDate(from.getDate() - 1);
             var to = new Date();
             $('#date_range').text(moment(from).format('YYYY/MM/DD') + ' - ' + moment(to).format('YYYY/MM/DD'));
 
             instruments.fetch({
                 data: {project: window.project},
             }).then(function () {
+
+                function newRow () {
+                    return $('<div class="row-fluid"></div>');
+                }
+                var odd = true;
+                var row;
                 instruments.each(function (instrument) {
+                    if (odd) {
+                        row = new newRow();
+                        $('#instruments').append(row);
+                    }
+                    odd = !odd;
+
                     v = new Stats.views.Instrument({
                         model: instrument,
                         field: 'max'
@@ -31,7 +43,7 @@ $(document).ready(function () {
                     });
                     instrument.getLatest();
 
-                    $('#instruments').append(v.el);
+                    row.append(v.el);
                     v.render();
 
                 });
