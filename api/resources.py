@@ -145,6 +145,7 @@ class MetricDataResource(BucketResource):
         return bundle.obj.metric.slug
 
     def hydrate_metric(self, bundle):
+        print bundle.request.POST
         bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
         return bundle
 
@@ -168,12 +169,17 @@ class InstrumentResource(ModelResource):
     metric = fields.CharField('metric__slug')
     annotations = fields.ListField('annotations')
     aggregations = fields.ListField('aggregations')
+    offset = fields.IntegerField(default=0)
+    values = fields.ListField('values')
 
     def dehydrate_annotations(self, bundle):
         return simplejson.loads(bundle.obj.annotations)
 
     def dehydrate_aggregations(self, bundle):
         return simplejson.loads(bundle.obj.aggregations)
+
+    def dehydrate_values(self, bundle):
+        return simplejson.loads(bundle.obj.values)
 
     def build_filters(self, filters=None):
         slug = None
@@ -189,7 +195,7 @@ class InstrumentResource(ModelResource):
     class Meta:
         queryset = Instrument.objects.all()
         resource_name = "instruments"
-        fields = ['name']
+        fields = ['name', 'width', 'domain', 'units']
 
 
 class EventResource(ModelResource):

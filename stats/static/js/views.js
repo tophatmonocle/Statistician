@@ -11,14 +11,14 @@
         },
         set_latest: function () {
             var value = this.model.get('latest').value;
-            this.$('.latest').text(Humanize.intcomma(value));
+            this.$('.latest').text(Humanize.intcomma(value) + ' ' + this.model.get('units'));
         },
         map_data: function () {
             var buckets = this.model.get('buckets');
             return _.map(buckets, function (bucket) {
                 var x, y;
                 x = new Date(bucket.timestamp).getTime();
-                y = bucket[this.options.field] || 0;
+                y = bucket[this.model.get('values')[0]] || 0;
                 return {
                     x: x,
                     y: y

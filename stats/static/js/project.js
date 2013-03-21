@@ -12,10 +12,7 @@ $(document).ready(function () {
             if (window.app.instruments) { return; }
             window.app.instruments = new Stats.collections.Instruments();
             var instruments = window.app.instruments;
-            var from = new Date();
-            from.setDate(from.getDate() - 1);
-            var to = new Date();
-            $('#date_range').text(moment(from).format('YYYY/MM/DD') + ' - ' + moment(to).format('YYYY/MM/DD'));
+            // $('#date_range').text(moment(from).format('YYYY/MM/DD') + ' - ' + moment(to).format('YYYY/MM/DD'));
 
             instruments.fetch({
                 data: {project: window.project},
@@ -35,12 +32,8 @@ $(document).ready(function () {
 
                     v = new Stats.views.Instrument({
                         model: instrument,
-                        field: 'max'
                     });
-                    instrument.getData({
-                        from: from,
-                        to: to,
-                    });
+                    instrument.getData();
                     instrument.getLatest();
 
                     row.append(v.el);

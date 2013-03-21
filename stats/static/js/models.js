@@ -13,11 +13,23 @@
         urlRoot: '/api/v1/instruments/',
         dataUrl: '/api/v1/metric_data/',
         bucketUrl: '/api/v1/metric_data/buckets/',
+        initialize: function () {
+            // update things every minute
+            this.timer = setInterval(function () {
+                this.getLatest();
+                this.getData();
+            }.bind(this), 60*1000);
+
+        },
         defaults: {
             aggregations: [],
             annotations: [],
             buckets: [],
-            latest: null
+            latest: null,
+            width: 180,
+            domain: 86400,
+            offset: 0,
+            units: null
         },
         getLatest: function (options, cb, context) {
             var data = {    
@@ -43,11 +55,23 @@
             });
         },
         getData: function (options, cb, context) {
-            var data;
+            var data, from, to;
+            if (options && options.from) {
+                from = options.from;
+            } else {
+                from = new Date();
+                from.setSeconds(from.getSeconds() - this.get('domain'));
+            }
+            if (options && options.to) {
+                to =options.to;
+            } else {
+                to = new Date();
+                to.setSeconds(to.getSeconds() - this.get('offset'));
+            }
             data = {
-                from: options.from.toISOString(),
-                to: options.to.toISOString(),
-                width: options.width,
+                from: from.toISOString(),
+                to: to.toISOString(),
+                width: this.get('width'),
                 aggregations: JSON.stringify(this.get('aggregations')),
                 annotations: JSON.stringify(this.get('annotations')),
                 metric: this.get('metric')
