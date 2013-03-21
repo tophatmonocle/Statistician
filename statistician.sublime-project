@@ -1,0 +1,9 @@
+{
+	"folders":
+	[
+		{
+			"path": "/Users/hughes/Documents/dev/Statistician",
+            "folder_exclude_patterns": ["migrations", "libraries", "compressed", "compiled"]
+		}
+	]
+}
