@@ -16,46 +16,44 @@
         initialize: function () {
             // update things every minute
             this.timer = setInterval(function () {
-                this.getLatest();
+                // this.getLatest();
                 this.getData();
             }.bind(this), 60*1000);
 
         },
         defaults: {
-            aggregations: [],
-            annotations: [],
-            buckets: [],
+            buckets: {},
             latest: null,
             width: 180,
             domain: 86400,
             offset: 0,
             units: null
         },
-        getLatest: function (options, cb, context) {
-            var data = {    
-                order_by: '-timestamp',
-                limit: 1,
-                metric: this.get('metric')
-            }
+        // getLatest: function (options, cb, context) {
+        //     var data = {    
+        //         order_by: '-timestamp',
+        //         limit: 1,
+        //         metric: this.get('metric')
+        //     }
 
-            return $.ajax({
-                url: this.dataUrl,
-                dataType: 'json',
-                type: 'GET',
-                data: data,
-                context: this,
-                success: function (data, statux, xhr) {
-                    if (data.objects && data.objects.length == 1) {
-                        this.set({latest: data.objects[0]});
-                        if (_.isFunction(cb)) {
-                            cb.call(context);
-                        }
-                    }
-                }
-            });
-        },
+        //     return $.ajax({
+        //         url: this.dataUrl,
+        //         dataType: 'json',
+        //         type: 'GET',
+        //         data: data,
+        //         context: this,
+        //         success: function (data, statux, xhr) {
+        //             if (data.objects && data.objects.length == 1) {
+        //                 this.set({latest: data.objects[0]});
+        //                 if (_.isFunction(cb)) {
+        //                     cb.call(context);
+        //                 }
+        //             }
+        //         }
+        //     });
+        // },
         getData: function (options, cb, context) {
-            var data, from, to;
+            var data, from, to, readings;
             if (options && options.from) {
                 from = options.from;
             } else {
@@ -68,13 +66,20 @@
                 to = new Date();
                 to.setSeconds(to.getSeconds() - this.get('offset'));
             }
+
+            readings = _.map(this.get('readings'), function (reading) {
+                return {
+                    name: reading.name,
+                    metric: reading.metric_slug,
+                    method: reading.method
+                };
+            });
+
             data = {
                 from: from.toISOString(),
                 to: to.toISOString(),
                 width: this.get('width'),
-                aggregations: JSON.stringify(this.get('aggregations')),
-                annotations: JSON.stringify(this.get('annotations')),
-                metric: this.get('metric')
+                readings: JSON.stringify(readings)
             };
 
             return $.ajax({

@@ -18,7 +18,12 @@
             return _.map(buckets, function (bucket) {
                 var x, y;
                 x = new Date(bucket.timestamp).getTime();
-                y = bucket[this.model.get('values')[0]] || 0;
+                y = {};
+                _.each(bucket, function (value, key) {
+                    if (key !== 'timestamp') {
+                        y[key] = value;
+                    }
+                });
                 return {
                     x: x,
                     y: y
@@ -34,10 +39,24 @@
 
             var vis = d3.select(this.el);
 
-            var yMin = _.min(data, function (datum) { return datum.y }).y,
-                yMax = _.max(data, function (datum) { return datum.y }).y,
-                xMin = _.min(data, function (datum) { return datum.x }).x,
+            var xMin = _.min(data, function (datum) { return datum.x }).x,
                 xMax = _.max(data, function (datum) { return datum.x }).x;
+
+            var yMin, yMax;
+
+            if (this.model.get('stack')) {
+                var sums = _.map(data, function (datum) {
+                    return _.reduce(datum.y, function (memo, num) { return memo + num; }, 0);
+                });
+                yMin = _.min(sums);
+                yMax = _.max(sums);
+            } else {
+                var maxes = _.map(data, function (datum) {
+                    return _.max(datum.y);
+                });
+                yMin = _.min(maxes);
+                yMax = _.max(maxes);
+            }
 
             var buffer = (yMax - yMin) * 0.1
             yMin = Math.max(0, yMin - buffer);
@@ -96,7 +115,8 @@
                 }.bind(this))
                 .y0(0)
                 .y1(function(d) {
-                    return this.y(d.y);
+                    var values = _.values(d.y);
+                    return this.y(_.first(values));
                 }.bind(this));
 
             this.area2 = d3.svg.area()
@@ -105,14 +125,15 @@
                     return this.x2(d.x);
                 }.bind(this))
                 .y1(function(d) {
-                    return this.y2(d.y);
+                    var values = _.values(d.y);
+                    return this.y2(_.first(values));
                 }.bind(this));
 
             this.svg = d3.select(this.$('.graph')[0]).append("svg")
 
             this.svg.append("defs").append("clipPath")
                 .attr("id", "clip")
-              .append("rect");
+                .append("rect");
 
             this.focus = this.svg.append("g");
 

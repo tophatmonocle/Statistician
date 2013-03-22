@@ -34,7 +34,7 @@ $(document).ready(function () {
                         model: instrument,
                     });
                     instrument.getData();
-                    instrument.getLatest();
+                    // instrument.getLatest();
 
                     row.append(v.el);
                     v.render();

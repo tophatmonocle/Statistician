@@ -1,7 +1,7 @@
 from tastypie.resources import ModelResource
 from tastypie.constants import ALL
 from tastypie import fields
-from stats.models import Metric, MetricData, Instrument, Event
+from stats.models import Metric, MetricData, Instrument, Event, Reading
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
 from django.conf.urls.defaults import url
@@ -70,34 +70,29 @@ class BucketResource(ModelResource):
         if bucket_count < 0:
             raise BadRequest('to was less than from')
 
-        obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
-
         buckets = []
         this_bucket = from_date
 
-        annotations = simplejson.loads(bundle.request.GET.get('annotations', "[]"))
-        aggregations = simplejson.loads(bundle.request.GET.get('aggregations', "[]"))
-
-        # annotations come first
-        annotation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in annotations)
-        obj_list = obj_list.annotate(**annotation_params)
+        obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
+        readings = dict((a['name'], a) for a in simplejson.loads(bundle.request.GET.get('readings', "[]")))
+        for name, a in readings.iteritems():
+            a['list'] = obj_list.filter(metric__slug=a['metric'])
 
         while this_bucket < to_date:
             next_bucket = this_bucket + timedelta(seconds=width)
-            bucket_obj = obj_list.filter(timestamp__gte=this_bucket,
-                                         timestamp__lt=next_bucket)
+            bucket = {
+                "timestamp": this_bucket.isoformat(),
+            }
 
-            count = bucket_obj.count()
-            if count > 0:
-                bucket = {
-                    "timestamp": this_bucket.isoformat(),
-                }
+            for name, a in readings.iteritems():
+                bucket_obj = a['list'].filter(timestamp__gte=this_bucket,
+                                              timestamp__lt=next_bucket)
 
-                aggregation_params = dict((a['name'], self.agg_funcs[a['func']](a['attr'])) for a in aggregations)
+                aggregation_params = {a['name']: self.agg_funcs[a['method']]('value')}
                 aggretate = bucket_obj.aggregate(**aggregation_params)
                 bucket.update(aggretate)
 
-                buckets.append(bucket)
+            buckets.append(bucket)
             this_bucket = next_bucket
 
         result = {
@@ -165,37 +160,36 @@ class MetricDataResource(BucketResource):
         }
 
 
-class InstrumentResource(ModelResource):
-    metric = fields.CharField('metric__slug')
-    annotations = fields.ListField('annotations')
-    aggregations = fields.ListField('aggregations')
-    offset = fields.IntegerField(default=0)
-    values = fields.ListField('values')
+class ReadingResource(ModelResource):
+    metric_slug = fields.CharField()
 
-    def dehydrate_annotations(self, bundle):
-        return simplejson.loads(bundle.obj.annotations)
-
-    def dehydrate_aggregations(self, bundle):
-        return simplejson.loads(bundle.obj.aggregations)
-
-    def dehydrate_values(self, bundle):
-        return simplejson.loads(bundle.obj.values)
-
-    def build_filters(self, filters=None):
-        slug = None
-        if filters is not None:
-            if 'project' in filters:
-                slug = filters['project']
-                del filters['project']
-        result = super(InstrumentResource, self).build_filters(filters)
-        if slug:
-            result["metric__project__slug"] = slug
-        return result
+    def dehydrate_metric_slug(self, bundle):
+        return bundle.obj.metric.slug
 
     class Meta:
-        queryset = Instrument.objects.all()
+        queryset = Reading.objects.all()
+        resource_name = "readings"
+        fields = ['name', 'method', 'stroke', 'fill']
+
+
+class InstrumentResource(ModelResource):
+    readings = fields.ToManyField(ReadingResource, 'reading_set', full=True)
+
+    # def build_filters(self, filters=None):
+    #     slug = None
+    #     if filters is not None:
+    #         if 'project' in filters:
+    #             slug = filters['project']
+    #             del filters['project']
+    #     result = super(InstrumentResource, self).build_filters(filters)
+    #     if slug:
+    #         result["metric__project__slug"] = slug
+    #     return result
+
+    class Meta:
+        queryset = Instrument.objects.all()  # filter(id__lte=1)
         resource_name = "instruments"
-        fields = ['name', 'width', 'domain', 'units']
+        fields = ['name', 'width', 'domain', 'units', 'offset', 'stack']
 
 
 class EventResource(ModelResource):

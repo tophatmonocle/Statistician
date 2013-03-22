@@ -30,6 +30,9 @@ class Metric(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField()
 
+    def __unicode__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)[:50]
         return super(Metric, self).save(*args, **kwargs)
@@ -47,17 +50,35 @@ class MetricData(models.Model):
 
 
 class Instrument(models.Model):
-    metric = models.ForeignKey(Metric)
     name = models.CharField(max_length=255)
     slug = models.SlugField()
 
-    annotations = models.TextField(default="[]")
-    aggregations = models.TextField(default="[]")
-    values = models.TextField(default="[]")
+    width = models.IntegerField(default=180)  # the bucket width in seconds
+    domain = models.IntegerField(default=60 * 60 * 24)  # the instrument domain in seconds
+
+    units = models.CharField(max_length=255)
+    stack = models.BooleanField(default=True)
+
+    readings = models.ManyToManyField(Metric, through='Reading')
+
+    def __unicode__(self):
+        return self.name
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)[:50]
         return super(Instrument, self).save(*args, **kwargs)
+
+
+class Reading(models.Model):
+    metric = models.ForeignKey(Metric)
+    instrument = models.ForeignKey(Instrument)
+    name = models.CharField(max_length=64)
+    method = models.CharField(max_length=64)
+    stroke = models.CharField(max_length=64, blank=True)
+    fill = models.CharField(max_length=64, blank=True, default='steelblue')
+
+    def __unicode__(self):
+        return "%s - %s" % (self.instrument.name, self.metric.name)
 
 
 class Event(models.Model):
