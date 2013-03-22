@@ -9,9 +9,9 @@
   height: 100%;
 }
 
-.plot, .miniplot {
-    stroke: none;
-    fill: steelblue;
+/*.plot, */.miniplot {
+    stroke: steelblue;
+    fill: none;
 }
 
 .axis path,

@@ -187,7 +187,7 @@ class InstrumentResource(ModelResource):
     #     return result
 
     class Meta:
-        queryset = Instrument.objects.all()  # filter(id__lte=1)
+        queryset = Instrument.objects.filter(id=9)
         resource_name = "instruments"
         fields = ['name', 'width', 'domain', 'units', 'offset', 'stack']
 

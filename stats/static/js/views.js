@@ -67,10 +67,12 @@
             this.x2.domain(this.x.domain());
             this.y2.domain(this.y.domain());
 
-            vis.selectAll('path.plot')
-                .data([data])
-                .attr("clip-path", "url(#clip)")
-                .attr("d", this.area);
+            _.each(this.model.get('readings'), function (reading) {
+                vis.selectAll('path[reading="'+reading.name+'"]')
+                    .data([data])
+                    .attr("clip-path", "url(#clip)")
+                    .attr("d", this.detailAreas[reading.name]);
+            }.bind(this));
 
             vis.selectAll('path.miniplot')
                 .data([data])
@@ -108,16 +110,44 @@
                 .on("brush", this.zoomView.bind(this))
                 .on('brushend', this.refineData.bind(this));
 
-            this.area = d3.svg.area()
-                .interpolate("monotone")
-                .x(function(d) {
-                    return this.x(d.x);
-                }.bind(this))
-                .y0(0)
-                .y1(function(d) {
-                    var values = _.values(d.y);
-                    return this.y(_.first(values));
-                }.bind(this));
+            this.detailAreas = {}
+
+            this.svg = d3.select(this.$('.graph')[0]).append("svg")
+            this.focus = this.svg.append("g");
+            this.context = this.svg.append("g")
+
+            _.each(this.model.get('readings'), function (reading, index) {
+                this.detailAreas[reading.name] = d3.svg.area()
+                    .interpolate("monotone")
+                    .x(function(d) {
+                        return this.x(d.x);
+                    }.bind(this))
+                    .y0(function (d) {
+                        if (this.model.get('stack')) {
+                            var values = _.first(_.values(d.y), index);
+                            var sum = _.reduce(values, function (memo, num) { return memo + num; }, 0);
+                            return sum;
+                        } else {
+                            return 0
+                        }
+                    })
+                    .y1(function(d) {
+                        if (this.model.get('stack')) {
+                            var values = _.first(_.values(d.y), index + 1);
+                            var sum = _.reduce(values, function (memo, num) { return memo + num; }, 0);
+                            return this.y(sum);
+                        } else {
+                            var values = _.values(d.y);
+                            return this.y(d.y[reading.name]);
+                        }
+                    }.bind(this));
+
+                this.focus.append("path")
+                    .attr("clip-path", "url(#clip)")
+                    .attr('class', 'plot')
+                    .attr('reading', reading.name)
+                    .attr('style', 'stroke:'+reading.stroke+'; fill:'+reading.fill+';');
+            }.bind(this));
 
             this.area2 = d3.svg.area()
                 .interpolate("monotone")
@@ -129,19 +159,10 @@
                     return this.y2(_.first(values));
                 }.bind(this));
 
-            this.svg = d3.select(this.$('.graph')[0]).append("svg")
 
             this.svg.append("defs").append("clipPath")
                 .attr("id", "clip")
                 .append("rect");
-
-            this.focus = this.svg.append("g");
-
-            this.context = this.svg.append("g")
-
-            this.focus.append("path")
-                .attr("clip-path", "url(#clip)")
-                .attr('class', 'plot');
 
             this.focus.append("g")
                 .attr("class", "x axis")
@@ -194,8 +215,10 @@
                 .attr("y", -6)
                 .attr("height", height2 + 7);
 
-            this.area
-                .y0(height);
+            _.each(this.model.get('readings'), function (reading) {
+                this.detailAreas[reading.name]
+                    .y0(height);
+            }.bind(this));
 
             this.area2
                 .y0(height2);
@@ -207,7 +230,10 @@
                 .call(this.xAxis);
 
             if (this.has_data) {
-                this.focus.select("path").attr("d", this.area);
+                _.each(this.model.get('readings'), function (reading) {
+                    this.focus.select("path[reading='"+reading.name+"']")
+                        .attr("d", this.detailAreas[reading.name]);
+                }.bind(this));
                 this.focus.select(".x.axis").call(this.xAxis);
                 this.context.select("path").attr("d", this.area2);
                 this.context.select(".x.axis").call(this.xAxis2);
@@ -222,9 +248,12 @@
             svg.show();
         },
         zoomView: function () {
-          this.x.domain(this.brush.empty() ? this.x2.domain() : this.brush.extent());
-          this.focus.select("path").attr("d", this.area);
-          this.focus.select(".x.axis").call(this.xAxis);
+            this.x.domain(this.brush.empty() ? this.x2.domain() : this.brush.extent());
+            _.each(this.model.get('readings'), function (reading) {
+                this.focus.select("path[reading='"+reading.name+"']")
+                    .attr("d", this.detailAreas[reading.name]);
+            }.bind(this));
+            this.focus.select(".x.axis").call(this.xAxis);
         },
         refineData: function() {
             var extent = this.brush.extent(), from, to;
