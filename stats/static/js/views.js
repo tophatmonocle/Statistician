@@ -32,15 +32,15 @@
         },
         set_data: function () {
             var data = this.map_data();
-            if (data.length == 0) { return; }
+            if (data.length === 0) { return; }
             this.$('.loading').hide();
             this.$('.graph').show();
             this.has_data = true;
 
             var vis = d3.select(this.el);
 
-            var xMin = _.min(data, function (datum) { return datum.x }).x,
-                xMax = _.max(data, function (datum) { return datum.x }).x;
+            var xMin = _.min(data, function (datum) { return datum.x; }).x,
+                xMax = _.max(data, function (datum) { return datum.x; }).x;
 
             var yMin, yMax;
 
@@ -58,7 +58,7 @@
                 yMax = _.max(maxes);
             }
 
-            var buffer = (yMax - yMin) * 0.1
+            var buffer = (yMax - yMin) * 0.1;
             yMin = Math.max(0, yMin - buffer);
             yMax += buffer;
 
@@ -110,13 +110,14 @@
                 .on("brush", this.zoomView.bind(this))
                 .on('brushend', this.refineData.bind(this));
 
-            this.detailAreas = {}
+            this.detailAreas = {};
 
-            this.svg = d3.select(this.$('.graph')[0]).append("svg")
+            this.svg = d3.select(this.$('.graph')[0]).append("svg");
             this.focus = this.svg.append("g");
-            this.context = this.svg.append("g")
+            this.context = this.svg.append("g");
 
             _.each(this.model.get('readings'), function (reading, index) {
+                var values;
                 this.detailAreas[reading.name] = d3.svg.area()
                     .interpolate("monotone")
                     .x(function(d) {
@@ -128,16 +129,16 @@
                             var sum = _.reduce(values, function (memo, num) { return memo + num; }, 0);
                             return sum;
                         } else {
-                            return 0
+                            return 0;
                         }
                     })
                     .y1(function(d) {
                         if (this.model.get('stack')) {
-                            var values = _.first(_.values(d.y), index + 1);
+                            values = _.first(_.values(d.y), index + 1);
                             var sum = _.reduce(values, function (memo, num) { return memo + num; }, 0);
                             return this.y(sum);
                         } else {
-                            var values = _.values(d.y);
+                            values = _.values(d.y);
                             return this.y(d.y[reading.name]);
                         }
                     }.bind(this));
@@ -165,16 +166,16 @@
                 .append("rect");
 
             this.focus.append("g")
-                .attr("class", "x axis")
+                .attr("class", "x axis");
             this.focus.append("g")
                 .attr("class", "y axis")
                 .call(this.yAxis);
             this.context.append("path")
                 .attr('class', 'miniplot');
             this.context.append("g")
-                .attr("class", "x axis")
+                .attr("class", "x axis");
             this.context.append("g")
-                .attr("class", "x brush")
+                .attr("class", "x brush");
 
             $(window).on('resize', this.resizeChart.bind(this));
             this.resizeChart();
@@ -208,7 +209,7 @@
                 .attr("width", width)
                 .attr("height", height);
 
-            this.brush.x(this.x2)
+            this.brush.x(this.x2);
             this.svg.select('.brush')
                 .call(this.brush)
                 .selectAll("rect")
@@ -263,7 +264,7 @@
                 this.model.getData({
                     from: from,
                     to: to
-                })
+                });
             }
         }
     });
@@ -273,7 +274,7 @@
         icon: function () {
             switch (this.model.get('type')) {
             default:
-                return "fa-icon-calendar"
+                return "fa-icon-calendar";
             }
         },
         render: function () {
