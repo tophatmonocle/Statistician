@@ -27,8 +27,33 @@
     shape-rendering: crispEdges;
 }
 
+.hover-line line {
+    stroke: #777;
+}
+
+.hover-line line.hide {
+    display: none;
+}
+
 text {
     color: #fff;
+}
+
+.labelEl {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    white-space: nowrap;
+}
+
+.labelEl ul {
+    list-style: none;
+    display: block;
+}
+
+.labelEl li {
+    display: inline;
+    margin-right: 10px;
 }
 
 svg {
@@ -61,7 +86,29 @@ svg {
     display: block;
     margin-bottom: -1em;
     float: right;
-    right: 0px;
+    right: 0;
     font-size: 2.5em;
     margin-right: 1em;
+}
+
+ul.legend {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    /*float: right;*/
+    position: absolute;
+    right: 0px;
+}
+
+ul.legend li {
+    display: inline;
+    margin-right: 15px;
+}
+
+span.legend-color {
+    width: 0.8em;
+    height: 0.8em;
+    display: inline-block;
+    border: 1px solid black;
+    margin-right: 0.2em;
 }

@@ -141,7 +141,11 @@ class MetricDataResource(BucketResource):
 
     def hydrate_metric(self, bundle):
         print bundle.request.POST
-        bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
+        try:
+            bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
+        except Metric.DoesNotExist, e:
+            print "Metric does not exist"
+            raise BadRequest("Metric does not exist")
         return bundle
 
     class Meta:
@@ -187,9 +191,9 @@ class InstrumentResource(ModelResource):
     #     return result
 
     class Meta:
-        queryset = Instrument.objects.filter(id=9)
+        queryset = Instrument.objects.filter(active=True)
         resource_name = "instruments"
-        fields = ['name', 'width', 'domain', 'units', 'offset', 'stack']
+        fields = ['name', 'width', 'domain', 'units', 'offset', 'stack', 'legend']
 
 
 class EventResource(ModelResource):

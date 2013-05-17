@@ -61,6 +61,9 @@ class Instrument(models.Model):
 
     readings = models.ManyToManyField(Metric, through='Reading')
 
+    active = models.BooleanField(default=True)
+    legend = models.BooleanField(default=False)
+
     def __unicode__(self):
         return self.name
 

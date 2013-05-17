@@ -32,6 +32,7 @@
         },
         set_data: function () {
             var data = this.map_data();
+            this.data = data;
             if (data.length === 0) { return; }
             this.$('.loading').hide();
             this.$('.graph').show();
@@ -64,8 +65,8 @@
 
             this.x.domain([xMin, xMax]);
             this.y.domain([yMin, yMax]);
-            this.x2.domain(this.x.domain());
-            this.y2.domain(this.y.domain());
+            // this.x2.domain(this.x.domain());
+            // this.y2.domain(this.y.domain());
 
             _.each(this.model.get('readings'), function (reading) {
                 vis.selectAll('path[reading="'+reading.name+'"]')
@@ -74,10 +75,10 @@
                     .attr("d", this.detailAreas[reading.name]);
             }.bind(this));
 
-            vis.selectAll('path.miniplot')
-                .data([data])
-                .attr("clip-path", "url(#clip)")
-                .attr("d", this.area2);
+            // vis.selectAll('path.miniplot')
+            //     .data([data])
+            //     .attr("clip-path", "url(#clip)")
+            //     .attr("d", this.area2);
 
             this.yAxis.scale(this.y);
             this.focus.select('.y.axis')
@@ -87,23 +88,23 @@
             this.focus.select('.x.axis')
                 .call(this.xAxis);
 
-            this.xAxis2.scale(this.x2);
-            this.context.select('.x.axis')
-                .call(this.xAxis2);
+            // this.xAxis2.scale(this.x2);
+            // this.context.select('.x.axis')
+                // .call(this.xAxis2);
 
-            this.brush.x(this.x2);
-            this.zoomView();
+            // this.brush.x(this.x2);
+            // this.zoomView();
         },
         render: function () {
-            this.$el.append(this.template(this.model));
+            this.$el.append(this.template(this.model.toJSON()));
 
             this.x = d3.time.scale(),
-            this.x2 = d3.time.scale(),
+            // this.x2 = d3.time.scale(),
             this.y = d3.scale.linear(),
-            this.y2 = d3.scale.linear();
+            // this.y2 = d3.scale.linear();
 
             this.xAxis = d3.svg.axis(),
-            this.xAxis2 = d3.svg.axis(),
+            // this.xAxis2 = d3.svg.axis(),
             this.yAxis = d3.svg.axis();
 
             this.brush = d3.svg.brush()
@@ -150,15 +151,15 @@
                     .attr('style', 'stroke:'+reading.stroke+'; fill:'+reading.fill+';');
             }.bind(this));
 
-            this.area2 = d3.svg.area()
-                .interpolate("monotone")
-                .x(function(d) {
-                    return this.x2(d.x);
-                }.bind(this))
-                .y1(function(d) {
-                    var values = _.values(d.y);
-                    return this.y2(_.first(values));
-                }.bind(this));
+            // this.area2 = d3.svg.area()
+            //     .interpolate("monotone")
+            //     .x(function(d) {
+            //         return this.x2(d.x);
+            //     }.bind(this))
+            //     .y1(function(d) {
+            //         var values = _.values(d.y);
+            //         return this.y2(_.first(values));
+            //     }.bind(this));
 
 
             this.svg.append("defs").append("clipPath")
@@ -170,15 +171,65 @@
             this.focus.append("g")
                 .attr("class", "y axis")
                 .call(this.yAxis);
-            this.context.append("path")
-                .attr('class', 'miniplot');
-            this.context.append("g")
-                .attr("class", "x axis");
-            this.context.append("g")
-                .attr("class", "x brush");
+            // this.context.append("path")
+                // .attr('class', 'miniplot');
+            // this.context.append("g")
+                // .attr("class", "x axis");
+            // this.context.append("g")
+                // .attr("class", "x brush");
+
+            this.hoverLineGroup = this.focus.append('g');
+            this.hoverLineGroup.attr('class', 'hover-line');
+            this.hoverLine = this.hoverLineGroup
+                .append('line')
+                    .attr('x1', 10)
+                    .attr('x2', 10)
+                    .attr('y1', 0)
+                    .attr('y2', 180);
 
             $(window).on('resize', this.resizeChart.bind(this));
             this.resizeChart();
+            this.$el.mousemove(function (e) {
+                this.hoverLine.classed('hide', false);
+                this.$('.labelEl').show();
+                var mouseX = e.pageX - this.$el.offset().left - 60;
+                this.hoverLine.attr('x1', mouseX).attr('x2', mouseX);
+                if (this.has_data) {
+                    var xValue = this.x.invert(mouseX);
+                    var dx = this.data[1].x - this.data[0].x;
+                    var index = (xValue.getTime() - this.data[0].x) / dx;
+                    index = Math.round(index);
+                    if (index >= this.data.length) {
+                        index = this.data.length - 1;
+                    }
+                    if (index < 0) {
+                        index = 0;
+                    }
+                    var v = this.data[index];
+                    var ul = this.$('.labelEl ul');
+                    ul.empty();
+                    var sum = 0;
+                    _.each(v.y, function (value, key) {
+                        sum += value;
+                        if (value === null) {
+                            value = 'No data';
+                        } else {
+                            value = Math.round(value*10)/10;
+                            if (this.model.get('units')) {
+                                value += '' + this.model.get('units');
+                            }
+                        }
+                        ul.append('<li>'+key+': '+value+'</li>');
+                    }.bind(this));
+                    if (this.model.get('stack')) {
+                        ul.append('<li>Total: '+sum+'</li>');
+                    }
+                }
+            }.bind(this));
+            this.$el.mouseout(function (e) {
+                this.hoverLine.classed('hide', true);
+                this.$('.labelEl').hide();
+            }.bind(this));
         },
         resizeChart: function () {
             var svg = this.$('svg');
@@ -191,12 +242,12 @@
                 height2 = 270 - margin2.top - margin2.bottom;
 
             this.x.range([0, width]);
-            this.x2.range([0, width]);
+            // this.x2.range([0, width]);
             this.y.range([height, 0]);
-            this.y2.range([height2, 0]);
+            // this.y2.range([height2, 0]);
 
             this.xAxis.scale(this.x).orient("bottom"),
-            this.xAxis2.scale(this.x2).orient("bottom"),
+            // this.xAxis2.scale(this.x2).orient("bottom"),
             this.yAxis.scale(this.y).orient("left");
 
             var svgW = width + margin.left + margin.right,
@@ -209,20 +260,20 @@
                 .attr("width", width)
                 .attr("height", height);
 
-            this.brush.x(this.x2);
-            this.svg.select('.brush')
-                .call(this.brush)
-                .selectAll("rect")
-                .attr("y", -6)
-                .attr("height", height2 + 7);
+            // this.brush.x(this.x2);
+            // this.svg.select('.brush')
+            //     .call(this.brush)
+            //     .selectAll("rect")
+            //     .attr("y", -6)
+            //     .attr("height", height2 + 7);
 
             _.each(this.model.get('readings'), function (reading) {
                 this.detailAreas[reading.name]
                     .y0(height);
             }.bind(this));
 
-            this.area2
-                .y0(height2);
+            // this.area2
+            //     .y0(height2);
 
             this.focus
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
@@ -236,25 +287,25 @@
                         .attr("d", this.detailAreas[reading.name]);
                 }.bind(this));
                 this.focus.select(".x.axis").call(this.xAxis);
-                this.context.select("path").attr("d", this.area2);
-                this.context.select(".x.axis").call(this.xAxis2);
+                // this.context.select("path").attr("d", this.area2);
+                // this.context.select(".x.axis").call(this.xAxis2);
             }
 
             this.context
                 .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")")
               .select('g')
-                .attr("transform", "translate(0," + height2 + ")")
-                .call(this.xAxis2);
+                .attr("transform", "translate(0," + height2 + ")");
+                // .call(this.xAxis2);
 
             svg.show();
         },
         zoomView: function () {
-            this.x.domain(this.brush.empty() ? this.x2.domain() : this.brush.extent());
-            _.each(this.model.get('readings'), function (reading) {
-                this.focus.select("path[reading='"+reading.name+"']")
-                    .attr("d", this.detailAreas[reading.name]);
-            }.bind(this));
-            this.focus.select(".x.axis").call(this.xAxis);
+            // this.x.domain(this.brush.empty() ? this.x2.domain() : this.brush.extent());
+            // _.each(this.model.get('readings'), function (reading) {
+            //     this.focus.select("path[reading='"+reading.name+"']")
+            //         .attr("d", this.detailAreas[reading.name]);
+            // }.bind(this));
+            // this.focus.select(".x.axis").call(this.xAxis);
         },
         refineData: function() {
             var extent = this.brush.extent(), from, to;

@@ -9,10 +9,16 @@
     window.project = {% if project %}'{{ project }}'{% else %}null{% endif %};
 </script>
 <script type="text/html" id="instrument_template">
-    <h2><%= get('name') %></h2>
+    <h2><%= name %></h2>
+    <ul class="legend">
+    <% if (legend) { _.each(readings, function (reading) { %>
+        <li><span class="legend-color" style="background-color: <%= reading.stroke %>"></span><%= reading.name %></li>
+    <% }); } %>
+    </ul>
     <span class="latest"></span>
     <div class="loading"></div>
     <div class="graph" style="display: none">
+    <div class="labelEl" style="display: none"><ul></ul></div>
     </div>
 </script>
 <script type="text/html" id="event_template">
@@ -68,7 +74,6 @@
         <div data-content="">
             <div class="row-fluid stats-date">
                 <h1>Dashboard</h1>
-                <div class="range" id="date_range">loading...</div>
             </div>
             <div class="row-fluid" id="instruments">
             </div>
@@ -76,7 +81,6 @@
         <div data-content="reports">
             <div class="row-fluid stats-date">
                 <h1>Reports</h1>
-                <div class="range" id="date_range">loading...</div>
             </div>
         </div>
         <div data-content="events" style="display:none">
@@ -88,7 +92,6 @@
         <div data-content="servers" style="display:none">
             <div class="row-fluid stats-date">
                 <h1>Servers</h1>
-                <div class="range" id="date_range">loading...</div>
             </div>
         </div>
     </div>
