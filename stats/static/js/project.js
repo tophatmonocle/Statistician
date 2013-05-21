@@ -15,7 +15,7 @@ $(document).ready(function () {
             // $('#date_range').text(moment(from).format('YYYY/MM/DD') + ' - ' + moment(to).format('YYYY/MM/DD'));
 
             instruments.fetch({
-                data: {project: window.project},
+                data: {project: window.project}
             }).then(function () {
 
                 function newRow () {
@@ -31,7 +31,7 @@ $(document).ready(function () {
                     odd = !odd;
 
                     v = new Stats.views.Instrument({
-                        model: instrument,
+                        model: instrument
                     });
                     instrument.getData();
                     // instrument.getLatest();
@@ -47,7 +47,7 @@ $(document).ready(function () {
             window.app.events = new Stats.collections.Events();
             var events = window.app.events;
             events.fetch({
-                data: {project: window.project},
+                data: {project: window.project}
             }).then(function () {
                 var alt = false;
                 events.each(function (event) {
@@ -60,7 +60,7 @@ $(document).ready(function () {
                     alt = !alt;
                 });
             });
-        },
+        }
     });
     window.app = new StatsRouter();
     app.on('route', function () {
