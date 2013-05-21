@@ -1,1 +1,1 @@
-Shows logs and shit.
+Shows logs and stuff.
