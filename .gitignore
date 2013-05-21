@@ -1,4 +1,4 @@
 *.pyc
 config.py
 .DS_Store
-*.sublime-
+*.sublime-*
