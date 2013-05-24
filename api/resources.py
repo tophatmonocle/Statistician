@@ -100,7 +100,6 @@ class BucketResource(ModelResource):
             "width": width,
             "buckets": buckets
         }
-
         return result
 
 
@@ -143,7 +142,7 @@ class MetricDataResource(BucketResource):
         print bundle.request.POST
         try:
             bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
-        except Metric.DoesNotExist, e:
+        except Metric.DoesNotExist:
             print "Metric does not exist"
             raise BadRequest("Metric does not exist")
         return bundle
@@ -159,9 +158,9 @@ class MetricDataResource(BucketResource):
             'timestamp': ALL,
             # 'metric': ALL_WITH_RELATIONS
         }
-        ordering = {
+        ordering = [
             'timestamp'
-        }
+        ]
 
 
 class ReadingResource(ModelResource):
