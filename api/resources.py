@@ -89,9 +89,14 @@ class BucketResource(ModelResource):
         buckets = []
         this_bucket = from_date
 
-        obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
-        readings = dict((a['name'], a) for a in simplejson.loads(bundle.request.GET.get('readings', "[]")))
-        str_key = "{0}{1}{2}{3}".format(str(readings), width, from_date.isoformat(), to_date.isoformat())
+        obj_list = self.obj_get_list(
+            bundle, **clean_kwargs).order_by('timestamp')
+
+        raw_readings = bundle.request.GET.get('readings', "[]")
+        readings = dict((a['name'], a) for a in simplejson.loads(raw_readings))
+
+        str_key = "{0}{1}{2}{3}".format(
+            str(readings), width, from_date.isoformat(), to_date.isoformat())
         cache_key = sha1(str_key).hexdigest()
 
         result = cache.get(cache_key)
@@ -109,7 +114,9 @@ class BucketResource(ModelResource):
                     bucket_obj = a['list'].filter(timestamp__gte=this_bucket,
                                                   timestamp__lt=next_bucket)
 
-                    aggregation_params = {a['name']: self.agg_funcs[a['method']]('value')}
+                    aggregation_params = {
+                        a['name']: self.agg_funcs[a['method']]('value')
+                    }
                     aggretate = bucket_obj.aggregate(**aggregation_params)
                     bucket.update(aggretate)
 
@@ -164,7 +171,8 @@ class MetricDataResource(BucketResource):
     def hydrate_metric(self, bundle):
         print bundle.request.POST
         try:
-            bundle.obj.metric = Metric.objects.get(slug=bundle.data.get('metric'))
+            bundle.obj.metric = Metric.objects.get(
+                slug=bundle.data.get('metric'))
         except Metric.DoesNotExist:
             print "Metric does not exist"
             raise BadRequest("Metric does not exist")
@@ -215,7 +223,8 @@ class InstrumentResource(ModelResource):
     class Meta:
         queryset = Instrument.objects.filter(active=True)
         resource_name = "instruments"
-        fields = ['name', 'width', 'domain', 'units', 'offset', 'stack', 'legend']
+        fields = ['name', 'width', 'domain', 'units',
+                  'offset', 'stack', 'legend']
 
 
 class EventResource(ModelResource):
