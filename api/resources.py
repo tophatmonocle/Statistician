@@ -8,8 +8,10 @@ from django.conf.urls.defaults import url
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest
 from iso8601 import parse_date
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.db.models import Avg, Max, Min, Sum, Variance, StdDev, Count
+from hashlib import sha1
+from django.core.cache import cache
 import simplejson
 
 
@@ -51,6 +53,16 @@ class BucketResource(ModelResource):
                 filters['timestamp__lt'] = filters['to']
         return super(BucketResource, self).build_filters(filters)
 
+    def timebox(self, dt, nearest=5, up=False):
+        """
+        Timebox a datetime.datetime (dt_obj) to nearest minutes, rounding up
+        or down based on the up parameter
+        """
+        nearest_minute = int(nearest * (int(dt.minute / nearest) + int(up)))
+        nearest_dt = datetime(
+            dt.year, dt.month, dt.day, dt.hour, nearest_minute)
+        return nearest_dt
+
     def build_buckets(self, bundle, **kwargs):
         clean_kwargs = self.remove_api_resource_names(kwargs)
         try:
@@ -58,6 +70,10 @@ class BucketResource(ModelResource):
             to_date = parse_date(bundle.request.GET.get('to'))
         except:
             raise BadRequest('missing required fields: from, to')
+
+        # timebox to the nearest ~5min mark
+        from_date = self.timebox(from_date, up=False)
+        to_date = self.timebox(to_date, up=True)
 
         width = int(bundle.request.GET.get('width', 1))
 
@@ -75,31 +91,38 @@ class BucketResource(ModelResource):
 
         obj_list = self.obj_get_list(bundle, **clean_kwargs).order_by('timestamp')
         readings = dict((a['name'], a) for a in simplejson.loads(bundle.request.GET.get('readings', "[]")))
-        for name, a in readings.iteritems():
-            a['list'] = obj_list.filter(metric__slug=a['metric'])
+        str_key = "{0}{1}{2}{3}".format(str(readings), width, from_date.isoformat(), to_date.isoformat())
+        cache_key = sha1(str_key).hexdigest()
 
-        while this_bucket < to_date:
-            next_bucket = this_bucket + timedelta(seconds=width)
-            bucket = {
-                "timestamp": this_bucket.isoformat(),
+        result = cache.get(cache_key)
+        if result is None:
+            for name, a in readings.iteritems():
+                a['list'] = obj_list.filter(metric__slug=a['metric'])
+
+            while this_bucket < to_date:
+                next_bucket = this_bucket + timedelta(seconds=width)
+                bucket = {
+                    "timestamp": this_bucket.isoformat(),
+                }
+
+                for name, a in readings.iteritems():
+                    bucket_obj = a['list'].filter(timestamp__gte=this_bucket,
+                                                  timestamp__lt=next_bucket)
+
+                    aggregation_params = {a['name']: self.agg_funcs[a['method']]('value')}
+                    aggretate = bucket_obj.aggregate(**aggregation_params)
+                    bucket.update(aggretate)
+
+                buckets.append(bucket)
+                this_bucket = next_bucket
+
+            result = {
+                "total_count": obj_list.count(),
+                "width": width,
+                "buckets": buckets
             }
 
-            for name, a in readings.iteritems():
-                bucket_obj = a['list'].filter(timestamp__gte=this_bucket,
-                                              timestamp__lt=next_bucket)
-
-                aggregation_params = {a['name']: self.agg_funcs[a['method']]('value')}
-                aggretate = bucket_obj.aggregate(**aggregation_params)
-                bucket.update(aggretate)
-
-            buckets.append(bucket)
-            this_bucket = next_bucket
-
-        result = {
-            "total_count": obj_list.count(),
-            "width": width,
-            "buckets": buckets
-        }
+            cache.set(cache_key, result, timeout=300)
         return result
 
 
